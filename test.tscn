@@ -1,0 +1,40 @@
+[gd_scene load_steps=5 format=3 uid="uid://bhmo4rx2i4xo7"]
+
+[ext_resource type="Script" path="res://addons/FFplay/FFGodot.cs" id="1_2pr2f"]
+[ext_resource type="Script" path="res://test.gd" id="1_xxa7v"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0npis"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_f1iou"]
+
+[node name="Test" type="Node3D"]
+script = ExtResource("1_xxa7v")
+ff_path = NodePath("FFplay")
+url = "rtmp://127.0.0.1:1935/live/test?token=123"
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866026, -0.433013, 0.25, 2.78059e-08, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 0, 0)
+shadow_enabled = true
+
+[node name="FFplay" type="Node" parent="." node_paths=PackedStringArray("renderMesh", "source")]
+script = ExtResource("1_2pr2f")
+renderMesh = NodePath("../TextureRect")
+source = NodePath("../AudioStreamPlayer3D")
+CanSeek = false
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+material_override = SubResource("StandardMaterial3D_0npis")
+mesh = SubResource("QuadMesh_f1iou")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="."]
+
+[node name="TextureRect" type="TextureRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
