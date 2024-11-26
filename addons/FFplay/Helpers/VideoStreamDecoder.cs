@@ -40,13 +40,13 @@ namespace FFmpeg.Godot.Helpers
                     // UnityEngine.Debug.Log($"HW at index {i} ({codecHWConfig->device_type}) {codecHWConfig->methods}");
                     if (codecHWConfig == null)
                     {
-                        GD.PushError("No HW decoder found.");
+                        GD.PrintErr("No HW decoder found.");
                         HWDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
                         break;
                     }
                     else if ((codecHWConfig->methods & 1) == 0 || codecHWConfig->device_type != HWDeviceType)
                     {
-                        GD.PushWarning($"HW at index {i} ({codecHWConfig->device_type}) not support/selected.");
+                        GD.Print($"HW at index {i} ({codecHWConfig->device_type}) not support/selected.");
                         continue;
                     }
                     else
@@ -188,6 +188,7 @@ namespace FFmpeg.Godot.Helpers
 
         public void Seek()
         {
+            ffmpeg.avcodec_flush_buffers(_pCodecContext);
             return;
             ffmpeg.av_frame_unref(_pFrame);
             ffmpeg.av_frame_unref(_receivedFrame);

@@ -1,7 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://bhmo4rx2i4xo7"]
+[gd_scene load_steps=7 format=3 uid="uid://bhmo4rx2i4xo7"]
 
-[ext_resource type="Script" path="res://addons/FFplay/FFGodot.cs" id="1_2pr2f"]
 [ext_resource type="Script" path="res://test.gd" id="1_xxa7v"]
+[ext_resource type="Script" path="res://addons/FFplay/FFPlayGodot.cs" id="2_jtmfe"]
+[ext_resource type="Script" path="res://addons/FFplay/FFTexturePlayer.cs" id="3_ux1yx"]
+[ext_resource type="Script" path="res://addons/FFplay/FFAudioPlayer.cs" id="4_g20ci"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0npis"]
 
@@ -9,18 +11,11 @@
 
 [node name="Test" type="Node3D"]
 script = ExtResource("1_xxa7v")
-ff_path = NodePath("FFplay")
-url = "rtmp://127.0.0.1:1935/live/test?token=123"
+ff_path = NodePath("FFPlayGodot")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866026, -0.433013, 0.25, 2.78059e-08, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 0, 0)
 shadow_enabled = true
-
-[node name="FFplay" type="Node" parent="." node_paths=PackedStringArray("renderMesh", "source")]
-script = ExtResource("1_2pr2f")
-renderMesh = NodePath("../TextureRect")
-source = NodePath("../AudioStreamPlayer3D")
-CanSeek = false
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 material_override = SubResource("StandardMaterial3D_0npis")
@@ -38,3 +33,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 expand_mode = 1
+
+[node name="FFPlayGodot" type="Node" parent="." node_paths=PackedStringArray("texturePlayer", "audioPlayer")]
+script = ExtResource("2_jtmfe")
+texturePlayer = NodePath("../FFTexturePlayer")
+audioPlayer = NodePath("../FFAudioPlayer")
+
+[node name="FFTexturePlayer" type="Node" parent="." node_paths=PackedStringArray("renderMesh")]
+script = ExtResource("3_ux1yx")
+renderMesh = NodePath("../MeshInstance3D")
+
+[node name="FFAudioPlayer" type="Node" parent="." node_paths=PackedStringArray("audioSource")]
+script = ExtResource("4_g20ci")
+audioSource = NodePath("../AudioStreamPlayer3D")
