@@ -10,6 +10,8 @@ namespace FFmpeg.Godot
         public FFTimings videoTimings;
         public FFTimings audioTimings;
 
+        private GodotThread thread;
+
         public event Action OnEndReached;
         public event Action OnVideoEndReached;
         public event Action OnAudioEndReached;
@@ -28,6 +30,9 @@ namespace FFmpeg.Godot
         private double timeOffset = 0d;
         private double pauseTime = 0d;
 
+        public bool IsPlaying { get; private set; } = false;
+        public bool IsStream { get; private set; } = false;
+
         public bool IsPaused { get; private set; } = false;
 
         public double timeAsDouble => Time.GetTicksMsec() / 1000d;
@@ -44,16 +49,20 @@ namespace FFmpeg.Godot
 
         public void Play(Stream streamV, Stream streamA)
         {
-            Resume();
-            videoTimings = new FFTimings(streamV, AVMediaType.AVMEDIA_TYPE_VIDEO, AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA);
+            IsPlaying = false;
+            StopThread();
+            OnDestroy();
+            videoTimings = new FFTimings(streamV, AVMediaType.AVMEDIA_TYPE_VIDEO);
             audioTimings = new FFTimings(streamA, AVMediaType.AVMEDIA_TYPE_AUDIO);
             Init();
         }
 
         public void Play(string urlV, string urlA)
         {
-            Resume();
-            videoTimings = new FFTimings(urlV, AVMediaType.AVMEDIA_TYPE_VIDEO, AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA);
+            IsPlaying = false;
+            StopThread();
+            OnDestroy();
+            videoTimings = new FFTimings(urlV, AVMediaType.AVMEDIA_TYPE_VIDEO);
             audioTimings = new FFTimings(urlA, AVMediaType.AVMEDIA_TYPE_AUDIO);
             Init();
         }
@@ -63,18 +72,33 @@ namespace FFmpeg.Godot
             if (audioTimings.IsInputValid)
                 audioPlayer.Init(audioTimings.decoder.SampleRate, audioTimings.decoder.Channels, audioTimings.decoder.SampleFormat);
             if (videoTimings.IsInputValid)
+            {
                 timeOffset = timeAsDouble - videoTimings.StartTime;
+                IsStream = Mathf.Abs(videoTimings.StartTime) > 5d;
+            }
             else
                 timeOffset = timeAsDouble;
             if (!videoTimings.IsInputValid && !audioTimings.IsInputValid)
             {
+                IsPaused = true;
+                StopThread();
                 GD.PrintErr("AV not found");
+                IsPlaying = false;
                 OnError?.Invoke();
+            }
+            else
+            {
+                audioPlayer.Resume();
+                RunThread();
+                IsPlaying = true;
             }
         }
 
         public void Seek(double timestamp)
         {
+            if (IsStream)
+                return;
+            StopThread();
             timeOffset = timeAsDouble - timestamp;
             pauseTime = timestamp;
             if (videoTimings != null)
@@ -84,8 +108,10 @@ namespace FFmpeg.Godot
             if (audioTimings != null)
             {
                 audioTimings.Seek(AudioTime);
+                audioTimings.GetFrames();
                 audioPlayer.Seek();
             }
+            RunThread();
         }
 
         public double GetLength()
@@ -99,26 +125,38 @@ namespace FFmpeg.Godot
 
         public void Pause()
         {
+            if (IsPaused)
+                return;
             pauseTime = PlaybackTime;
             audioPlayer.Pause();
             IsPaused = true;
+            StopThread();
+            IsPlaying = false;
         }
 
         public void Resume()
         {
+            if (!IsPaused)
+                return;
+            StopThread();
             timeOffset = timeAsDouble - pauseTime;
             audioPlayer.Resume();
             IsPaused = false;
+            RunThread();
+            IsPlaying = true;
         }
 
         private void Update()
         {
             if (!IsPaused)
             {
+                if (!thread.IsAlive() && IsPlaying)
+                {
+                    // StopThread();
+                    // RunThread();
+                }
                 if (videoTimings != null)
                 {
-                    videoTimings.Update(VideoTime);
-                    texturePlayer.PlayPacket(videoTimings.GetCurrentFrame());
                     if (videoTimings.IsEndOfFile())
                     {
                         Pause();
@@ -128,8 +166,6 @@ namespace FFmpeg.Godot
                 }
                 if (audioTimings != null)
                 {
-                    audioTimings.Update(AudioTime);
-                    audioPlayer.PlayPackets(audioTimings.GetCurrentFrames());
                     if (audioTimings.IsEndOfFile())
                     {
                         Pause();
@@ -140,6 +176,34 @@ namespace FFmpeg.Godot
             }
         }
 
+        private void ThreadUpdate()
+        {
+            GD.Print("ThreadUpdate Start");
+            while (!IsPaused)
+            {
+                OS.DelayMsec(3);
+                try
+                {
+                    if (videoTimings != null)
+                    {
+                        videoTimings.Update(VideoTime);
+                        texturePlayer.PlayPacket(videoTimings.GetFrame());
+                    }
+                    if (audioTimings != null)
+                    {
+                        audioTimings.Update(AudioTime);
+                        audioPlayer.PlayPackets(audioTimings.GetFrames());
+                    }
+                }
+                catch (Exception e)
+                {
+                    GD.PushError(e);
+                    break;
+                }
+            }
+            GD.Print("ThreadUpdate Done");
+        }
+
         private void OnDestroy()
         {
             videoTimings?.Dispose();
@@ -148,13 +212,40 @@ namespace FFmpeg.Godot
             audioTimings = null;
         }
 
+        private void RunThread()
+        {
+            if (thread.IsAlive())
+                throw new Exception();
+            // if (thread.IsAlive() && thread.IsStarted())
+                // StopThread();
+            IsPaused = false;
+            thread.Start(Callable.From(ThreadUpdate));
+        }
+
+        private void StopThread()
+        {
+            if (!thread.IsStarted())
+                return;
+            bool paused = IsPaused;
+            IsPaused = true;
+            thread.WaitToFinish();
+            IsPaused = paused;
+        }
+
         public override void _Process(double delta)
         {
             Update();
         }
 
+        public override void _EnterTree()
+        {
+            thread = new GodotThread();
+        }
+
         public override void _ExitTree()
         {
+            IsPaused = true;
+            StopThread();
             OnDestroy();
         }
     }

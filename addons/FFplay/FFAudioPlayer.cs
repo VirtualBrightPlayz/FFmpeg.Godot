@@ -15,6 +15,7 @@ namespace FFmpeg.Godot
         private int channels;
         private AVSampleFormat sampleFormat;
         private List<float> pcm = new List<float>();
+        private AudioStreamGeneratorPlayback playback;
 
         public void Init(int frequency, int channels, AVSampleFormat sampleFormat)
         {
@@ -27,6 +28,11 @@ namespace FFmpeg.Godot
                 MixRate = frequency,
             };
             audioSource.Stream = clip;
+            audioSource.Play();
+            if (audioSource.GetStreamPlayback() is AudioStreamGeneratorPlayback pb)
+            {
+                playback = pb;
+            }
         }
 
         public void Pause()
@@ -41,7 +47,19 @@ namespace FFmpeg.Godot
         
         public void Seek()
         {
-            audioSource.Stop();
+            if (audioSource.Playing && IsInstanceValid(playback))
+            {
+                playback.ClearBuffer();
+            }
+            else
+            {
+                // audioSource.Stop();
+                audioSource.Play();
+                if (audioSource.GetStreamPlayback() is AudioStreamGeneratorPlayback pb)
+                {
+                    playback = pb;
+                }
+            }
         }
 
         public void PlayPackets(List<AVFrame> frames)
@@ -76,17 +94,19 @@ namespace FFmpeg.Godot
                 {
                     pcm.Add(backBuffer3[i]);
                 }
-                break;
             }
             // source.AddQueue(pcm.ToArray(), 1, clip.frequency);
-            if (!audioSource.Playing)
-                audioSource.Play();
-            if (audioSource.Playing && audioSource.GetStreamPlayback() is AudioStreamGeneratorPlayback playback && playback.CanPushBuffer(1))
+            if (playback.CanPushBuffer(1))
             {
-                Vector2[] pcm2 = new Vector2[pcm.Count];
-                for (int i = 0; i < pcm.Count; i++)
+                Vector2[] pcm2 = new Vector2[pcm.Count / channels];
+                for (int i = 0; i < pcm2.Length; i++)
                 {
                     float ch1 = pcm[i];
+                    for (int j = 1; j < channels; j++)
+                    {
+                        ch1 += pcm[pcm2.Length * j + i];
+                    }
+                    ch1 /= channels;
                     pcm2[i] = new Vector2(ch1, ch1);
                 }
                 playback.PushBuffer(pcm2);

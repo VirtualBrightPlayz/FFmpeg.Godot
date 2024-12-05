@@ -15,6 +15,10 @@ namespace FFmpeg.Godot
         public Action<ImageTexture> OnDisplay = null;
         private Image image;
         private ImageTexture texture;
+        private int framewidth;
+        private int frameheight;
+        private byte[] framedata = new byte[0];
+        private Mutex mutex = new Mutex();
 
         public void PlayPacket(AVFrame frame)
         {
@@ -22,31 +26,67 @@ namespace FFmpeg.Godot
             byte[] data = new byte[frame.width * frame.height * 3];
             if (SaveFrame(frame, data))
             {
-                if (image == null)
-                    image = Image.CreateEmpty(16, 16, false, Image.Format.Rgb8);
-                // if (image.GetWidth() != frame.width || image.GetHeight() != frame.height)
-                image.SetData(frame.width, frame.height, false, Image.Format.Rgb8, data);
+                mutex.Lock();
+                framewidth = frame.width;
+                frameheight = frame.height;
+                framedata = data;
+                DisplayBytes(framewidth, frameheight, framedata);
+                mutex.Unlock();
+                // CallDeferred(nameof(DisplayBytes), frame.width, frame.height, data);
             }
-            if (IsInstanceValid(texture))
-                texture.SetImage(image);
-            else
-                texture = ImageTexture.CreateFromImage(image);
-            Display(texture);
         }
 
-        private void Display(ImageTexture texture)
+        public override void _Process(double delta)
         {
-            if (OnDisplay == null)
+            if (mutex.TryLock())
+            {
+                // DisplayBytes(framewidth, frameheight, framedata);
+                DisplayImage();
+                Display(texture);
+                mutex.Unlock();
+            }
+        }
+
+        private void DisplayBytes(int framewidth, int frameheight, byte[] data)
+        {
+            if (data == null || data.Length == 0)
+            {
+                return;
+            }
+            bool newImage = false;
+            if (image == null)
+                image = Image.CreateEmpty(16, 16, false, Image.Format.Rgb8);
+            if (image.GetWidth() != framewidth || image.GetHeight() != frameheight)
+                newImage = true;
+            image.SetData(framewidth, frameheight, false, Image.Format.Rgb8, data);
+            // image.GenerateMipmaps();
+        }
+
+        private void DisplayImage()
+        {
+            if (!IsInstanceValid(image))
+                return;
+            if (IsInstanceValid(texture))
+            {
+                if ((Vector2I)texture.GetSize() != image.GetSize())
+                    texture.SetImage(image);
+                else
+                    texture.Update(image);
+            }
+            else
+                texture = ImageTexture.CreateFromImage(image);
+        }
+
+        public void Display(ImageTexture texture)
+        {
+            if (IsInstanceValid(renderMesh))
             {
                 if (materialIndex == -1)
                     SetMainTex(renderMesh.GetActiveMaterial(0), texture);
                 else
                     SetMainTex(renderMesh.GetActiveMaterial(materialIndex), texture);
             }
-            else
-            {
-                OnDisplay.Invoke(texture);
-            }
+            OnDisplay?.Invoke(texture);
         }
 
         private void SetMainTex(Material material, ImageTexture texture)
