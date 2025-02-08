@@ -1,4 +1,4 @@
-﻿// namespace FFmpeg.AutoGen.Abstractions;
+﻿namespace FFmpeg.AutoGen.Abstractions;
 
 public interface IFixedArray
 {

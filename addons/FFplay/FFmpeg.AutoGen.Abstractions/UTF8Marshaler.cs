@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-// namespace FFmpeg.AutoGen.Abstractions;
+namespace FFmpeg.AutoGen.Abstractions;
 
 public class UTF8Marshaler : ICustomMarshaler
 {

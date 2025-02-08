@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using FFmpeg.AutoGen.Abstractions;
 using Godot;
 
 namespace FFmpeg.Godot.Helpers
@@ -112,7 +113,7 @@ namespace FFmpeg.Godot.Helpers
 
             for (p = (int*)fmt; *p != -1; p++)
             {
-                // if (*p == (int)HWPixelFormat)
+                if (*p == (int)HWPixelFormat)
                     return (AVPixelFormat)(*p);
             }
 

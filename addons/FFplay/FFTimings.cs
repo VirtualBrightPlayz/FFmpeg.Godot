@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using FFmpeg.AutoGen.Abstractions;
 using FFmpeg.Godot.Helpers;
 using Godot;
 
@@ -8,11 +9,6 @@ namespace FFmpeg.Godot
 {
     public class FFTimings : IDisposable
     {
-        static FFTimings()
-        {
-            DynamicallyLinkedBindings.Initialize();
-        }
-
         public FFmpegCtx context;
         public VideoStreamDecoder decoder;
 
@@ -49,14 +45,22 @@ namespace FFmpeg.Godot
             {
                 timeBaseSeconds = ffmpeg.av_q2d(timeBase);
                 decoder = new VideoStreamDecoder(context, type, deviceType);
-                if (type == AVMediaType.AVMEDIA_TYPE_VIDEO && context.NextFrame(out AVPacket packet))
                 {
-                    StartTime = packet.dts * timeBaseSeconds;
-                    AVFrame frame = DecodeFrame();
-                    if (frame.format != -1)
+                    // find the start time/time offset
+                    while (true)
                     {
-                        currentPacket = packet;
-                        currentFrame = frame;
+                        if (context.NextFrame(out AVPacket packet))
+                        {
+                            if (decoder.Decode(out AVFrame frame) == 0)
+                            {
+                                currentPacket = packet;
+                                currentFrame = frame;
+                                StartTime = currentPacket.dts * timeBaseSeconds;
+                                break;
+                            }
+                        }
+                        else
+                            break;
                     }
                 }
                 GD.Print($"timeBase={timeBase.num}/{timeBase.den}");
@@ -76,6 +80,7 @@ namespace FFmpeg.Godot
             if (!IsInputValid)
                 return;
             context.Seek(decoder, timestamp);
+            decoder.Seek();
             Update(timestamp);
             currentPacket = default;
         }
@@ -118,8 +123,7 @@ namespace FFmpeg.Godot
             {
                 if (context.NextFrame(out AVPacket packet))
                 {
-                    AVFrame frame = DecodeFrame();
-                    if (frame.format != -1)
+                    if (decoder.Decode(out AVFrame frame) == 0)
                     {
                         currentPacket = packet;
                         currentFrame = frame;
@@ -140,8 +144,7 @@ namespace FFmpeg.Godot
             {
                 if (context.NextFrame(out AVPacket packet))
                 {
-                    AVFrame frame = DecodeFrame();
-                    if (frame.format != -1)
+                    if (decoder.Decode(out AVFrame frame) == 0)
                     {
                         currentPacket = packet;
                         currentFrame = frame;

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-// namespace FFmpeg.AutoGen.Abstractions;
+namespace FFmpeg.AutoGen.Abstractions;
 
 public static partial class ffmpeg
 {
@@ -15,7 +15,7 @@ public static partial class ffmpeg
     
     static ffmpeg()
     {
-#if NET && false
+#if NET
         EAGAIN = 11;
 #elif NETSTANDARD2_0_OR_GREATER
         EAGAIN = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? 35 : 11;

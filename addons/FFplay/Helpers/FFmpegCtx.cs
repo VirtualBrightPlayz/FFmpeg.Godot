@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using FFmpeg.AutoGen.Abstractions;
 
 namespace FFmpeg.Godot.Helpers
 {
@@ -82,10 +83,12 @@ namespace FFmpeg.Godot.Helpers
         public double GetLength(VideoStreamDecoder decoder)
         {
             int _streamIndex = decoder._streamIndex;
-            if (_streamIndex < 0 || _streamIndex > _pFormatContext->nb_streams)
+            if (_streamIndex < 0 || _streamIndex >= _pFormatContext->nb_streams)
                 return 0d;
-            double time_base = (double)_pFormatContext->streams[_streamIndex]->time_base.num / _pFormatContext->streams[_streamIndex]->time_base.den;
-            return _pFormatContext->streams[_streamIndex]->duration * time_base;
+            AVRational base_q = _pFormatContext->streams[_streamIndex]->time_base;
+            long offset = _pFormatContext->streams[_streamIndex]->duration;
+            double time = ffmpeg.av_q2d(base_q);
+            return offset * time;
         }
 
         public bool TryGetFps(out double fps)

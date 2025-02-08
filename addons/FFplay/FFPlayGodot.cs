@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using FFmpeg.AutoGen.Abstractions;
 using Godot;
 
 namespace FFmpeg.Godot
@@ -18,7 +19,7 @@ namespace FFmpeg.Godot
         public event Action OnError;
 
         [Export]
-        public double videoOffset = 0d;
+        public double videoOffset = 0.5d;
         [Export]
         public double audioOffset = 0d;
 
@@ -73,11 +74,16 @@ namespace FFmpeg.Godot
                 audioPlayer.Init(audioTimings.decoder.SampleRate, audioTimings.decoder.Channels, audioTimings.decoder.SampleFormat);
             if (videoTimings.IsInputValid)
             {
-                timeOffset = timeAsDouble - videoTimings.StartTime;
+                timeOffset = timeAsDouble;
+                videoOffset = videoTimings.StartTime;
                 IsStream = Mathf.Abs(videoTimings.StartTime) > 5d;
             }
-            else
+            // else
                 timeOffset = timeAsDouble;
+            if (audioTimings.IsInputValid)
+            {
+                audioOffset = audioTimings.StartTime;
+            }
             if (!videoTimings.IsInputValid && !audioTimings.IsInputValid)
             {
                 IsPaused = true;

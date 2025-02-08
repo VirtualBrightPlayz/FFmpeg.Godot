@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using FFmpeg.AutoGen.Abstractions;
 using Godot;
 
 namespace FFmpeg.Godot
@@ -27,6 +28,8 @@ namespace FFmpeg.Godot
                 BufferLength = 1f,
                 MixRate = frequency,
             };
+            if (!IsInstanceValid(audioSource))
+                return;
             audioSource.Stream = clip;
             audioSource.Play();
             if (audioSource.GetStreamPlayback() is AudioStreamGeneratorPlayback pb)
@@ -37,16 +40,20 @@ namespace FFmpeg.Godot
 
         public void Pause()
         {
-            audioSource.StreamPaused = true;
+            if (IsInstanceValid(audioSource))
+                audioSource.StreamPaused = true;
         }
 
         public void Resume()
         {
-            audioSource.StreamPaused = false;
+            if (IsInstanceValid(audioSource))
+                audioSource.StreamPaused = false;
         }
         
         public void Seek()
         {
+            if (!IsInstanceValid(audioSource))
+                return;
             if (audioSource.Playing && IsInstanceValid(playback))
             {
                 playback.ClearBuffer();

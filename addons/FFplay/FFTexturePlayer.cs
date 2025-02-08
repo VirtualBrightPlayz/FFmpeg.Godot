@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using FFmpeg.AutoGen.Abstractions;
 using Godot;
 
 namespace FFmpeg.Godot
@@ -10,6 +11,8 @@ namespace FFmpeg.Godot
         public long pts;
         [Export]
         public MeshInstance3D renderMesh;
+        [Export]
+        public TextureRect renderRect;
         [Export]
         public int materialIndex = -1;
         public Action<ImageTexture> OnDisplay = null;
@@ -85,6 +88,10 @@ namespace FFmpeg.Godot
                     SetMainTex(renderMesh.GetActiveMaterial(0), texture);
                 else
                     SetMainTex(renderMesh.GetActiveMaterial(materialIndex), texture);
+            }
+            if (IsInstanceValid(renderRect))
+            {
+                renderRect.Texture = texture;
             }
             OnDisplay?.Invoke(texture);
         }

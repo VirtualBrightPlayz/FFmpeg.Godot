@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using Godot;
-// using FFmpeg.AutoGen.Abstractions;
+using FFmpeg.AutoGen.Abstractions;
 
 // namespace FFmpeg.AutoGen.Example;
 
